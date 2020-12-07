@@ -17,10 +17,10 @@ func NewScanner(domain string) *Scanner {
 // URL builds and returns the URL for the API calls.
 func (s *Scanner) URL() string {
 	if s.FromCache {
-		return service + "/api/v2/?json&scan=" + s.Domain
+		return service + "/api/v3/?json&scan=" + s.Domain
 	}
 
-	return service + "/api/v2/?json&scan=" + s.Domain + "&clear"
+	return service + "/api/v3/?json&scan=" + s.Domain + "&clear"
 }
 
 // Request builds and sends the HTTP request to the API service.
@@ -124,52 +124,47 @@ func (s *Scanner) Print(export bool) {
 func (s *Scanner) printWebsiteInformation() {
 	fmt.Println("\033[48;5;008m @ Website Information \033[0m")
 
-	fmt.Printf(" \033[1;95mSite:\033[0m %s\n", strings.Join(s.Report.Scan.Site, ",\x20"))
-	fmt.Printf(" \033[1;95mDomain:\033[0m %s\n", strings.Join(s.Report.Scan.Domain, ",\x20"))
-	fmt.Printf(" \033[1;95mIP:\033[0m %s\n", strings.Join(s.Report.Scan.IP, ",\x20"))
-	fmt.Printf(" \033[1;95mCMS:\033[0m %s\n", strings.Join(s.Report.Scan.CMS, ",\x20"))
-
-	if s.Report.Scan.WAF.HasSucuriWAF == 1 {
-		fmt.Printf(" \033[1;95mFirewall:\033[0m Sucuri Firewall\n")
-	} else if s.Report.Scan.WAF.HasWAF == 1 {
-		fmt.Printf(" \033[1;95mFirewall:\033[0m Generic Firewall\n")
-	} else {
-		fmt.Printf(" \033[1;95mFirewall:\033[0m \033[0;91mNo\033[0m\n")
+	fmt.Printf(" \033[1;95mSite:\033[0m %s\n", s.Report.Site.FinalURL)
+	fmt.Printf(" \033[1;95mDomain:\033[0m %s\n", s.Report.Site.Domain)
+	fmt.Printf(" \033[1;95mIP:\033[0m %s\n", strings.Join(s.Report.Site.IP, ", "))
+	if len(s.Report.Software.CMS) > 0 {
+		fmt.Printf(" \033[1;95mCMS:\033[0m %s\n", (s.Report.Software.CMS[0].Name + " " + s.Report.Software.CMS[0].Version))
 	}
 
-	for _, values := range s.Report.System {
-		for _, value := range values {
-			fmt.Printf(" \033[0;2m%s\033[0m\n", value)
-		}
-	}
+	fmt.Printf(" \033[1;95mFirewall:\033[0m %s\n", strings.Join(s.Report.Site.CDN, " "))
+	fmt.Printf(" \033[0;2mRunning on: %s\033[0m\n", strings.Join(s.Report.Site.PoweredBy, " "))
 }
 
 func (s *Scanner) printApplicationDetails() {
-	if len(s.Report.WebApp.Warn) <= 0 &&
-		len(s.Report.WebApp.Info) <= 0 &&
-		len(s.Report.WebApp.Version) <= 0 &&
-		len(s.Report.WebApp.Notice) <= 0 {
-		return
-	}
+	//TODO: Not implemented yet, need demo for V3 details
+	/*
+		if len(s.Report.WebApp.Warn) <= 0 &&
+			len(s.Report.WebApp.Info) <= 0 &&
+			len(s.Report.WebApp.Version) <= 0 &&
+			len(s.Report.WebApp.Notice) <= 0 {
+			return
+		}
+	*/
 
 	fmt.Println()
 	fmt.Println("\033[48;5;008m @ Application Details \033[0m")
+	/*
+		for _, value := range s.Report.WebApp.Warn {
+			fmt.Printf(" %s\n", value)
+		}
 
-	for _, value := range s.Report.WebApp.Warn {
-		fmt.Printf(" %s\n", value)
-	}
+		for _, values := range s.Report.WebApp.Info {
+			fmt.Printf(" %s \033[0;2m%s\033[0m\n", values[0], values[1])
+		}
 
-	for _, values := range s.Report.WebApp.Info {
-		fmt.Printf(" %s \033[0;2m%s\033[0m\n", values[0], values[1])
-	}
+		for _, value := range s.Report.WebApp.Version {
+			fmt.Printf(" %s\n", value)
+		}
 
-	for _, value := range s.Report.WebApp.Version {
-		fmt.Printf(" %s\n", value)
-	}
-
-	for _, value := range s.Report.WebApp.Notice {
-		fmt.Printf(" %s\n", value)
-	}
+		for _, value := range s.Report.WebApp.Notice {
+			fmt.Printf(" %s\n", value)
+		}
+	*/
 }
 
 // PrintRecommendations print security recommendations.
@@ -181,27 +176,37 @@ func (s *Scanner) printRecommendations() {
 	fmt.Println()
 	fmt.Println("\033[48;5;068m @ Recommendations \033[0m")
 
-	for _, values := range s.Report.Recommendations {
-		for _, value := range values {
-			fmt.Print(" \033[0;94m\u2022\033[0m " + value + "\n")
+	for keys, values := range s.Report.Recommendations {
+		fmt.Print(" \033[0;94m\u2022\033[0m " + keys + "\n")
+		for key, value := range values {
+			fmt.Print(" \t\033[0;94m\u2022\033[0m " + key + "\n")
+			if value.Details != "" {
+				fmt.Print(" \t\t\033[0;94m\u2022\033[0m Details: " + value.Details + "\n")
+			}
+			if len(value.Pages) > 0 {
+				fmt.Print(" \t\t\033[0;94m\u2022\033[0m Pages: " + strings.Join(value.Pages, " ") + "\n")
+			}
 		}
 	}
 }
 
 // PrintOutdatedScan print outdated software information.
 func (s *Scanner) printOutdatedScan() {
-	if len(s.Report.OutdatedScan) <= 0 {
-		return
-	}
+	//TODO: Outdated
+	/*
+		if len(s.Report.OutdatedScan) <= 0 {
+			return
+		}
 
-	fmt.Println()
-	fmt.Println("\033[48;5;068m @ OutdatedScan \033[0m")
+		fmt.Println()
+		fmt.Println("\033[48;5;068m @ OutdatedScan \033[0m")
 
-	for _, values := range s.Report.OutdatedScan {
-		fmt.Printf(" \033[0;94m\u2022\033[0m %s\n", values[0])
-		fmt.Printf("   %s\n", values[1])
-		fmt.Printf("   %s\n", values[2])
-	}
+		for _, values := range s.Report.OutdatedScan {
+			fmt.Printf(" \033[0;94m\u2022\033[0m %s\n", values[0])
+			fmt.Printf("   %s\n", values[1])
+			fmt.Printf("   %s\n", values[2])
+		}
+	*/
 }
 
 // PrintLinks print links, iframes, and local/external javascript files.
@@ -218,42 +223,48 @@ func (s *Scanner) printLinks() {
 
 // PrintBlacklistStatus print blacklist status information.
 func (s *Scanner) printBlacklistStatus() {
-	if len(s.Report.Blacklist.Warn) <= 0 && len(s.Report.Blacklist.Info) <= 0 {
-		return
-	}
+	//TODO: Blacklist
+	/*
+		if len(s.Report.Blacklist.Warn) <= 0 && len(s.Report.Blacklist.Info) <= 0 {
+			return
+		}
 
-	fmt.Println()
+		fmt.Println()
 
-	blacklistColor := "034"
+		blacklistColor := "034"
 
-	if len(s.Report.Blacklist.Warn) > 0 {
-		blacklistColor = "161"
-	}
+		if len(s.Report.Blacklist.Warn) > 0 {
+			blacklistColor = "161"
+		}
 
-	fmt.Printf("\033[48;5;%sm @ Blacklist Status \033[0m\n", blacklistColor)
+		fmt.Printf("\033[48;5;%sm @ Blacklist Status \033[0m\n", blacklistColor)
 
-	for _, values := range s.Report.Blacklist.Warn {
-		fmt.Printf(" \033[0;91m\u2718\033[0m %s\n", values[0])
-		fmt.Printf("   %s\n", values[1])
-	}
+		for _, values := range s.Report.Blacklist.Warn {
+			fmt.Printf(" \033[0;91m\u2718\033[0m %s\n", values[0])
+			fmt.Printf("   %s\n", values[1])
+		}
 
-	for _, values := range s.Report.Blacklist.Info {
-		fmt.Printf(" \033[0;92m\u2714\033[0m %s\n", values[0])
-		fmt.Printf("   %s\n", values[1])
-	}
+		for _, values := range s.Report.Blacklist.Info {
+			fmt.Printf(" \033[0;92m\u2714\033[0m %s\n", values[0])
+			fmt.Printf("   %s\n", values[1])
+		}
+	*/
 }
 
 // PrintMalwarePayloads print malware payload information.
 func (s *Scanner) printMalwarePayloads() {
-	if len(s.Report.Malware.Warn) <= 0 {
-		return
-	}
+	//TODO: Malware payloads
+	/*
+		if len(s.Report.Malware.Warn) <= 0 {
+			return
+		}
 
-	fmt.Println()
-	fmt.Println("\033[48;5;161m @ Malware Payloads \033[0m")
+		fmt.Println()
+		fmt.Println("\033[48;5;161m @ Malware Payloads \033[0m")
 
-	for _, values := range s.Report.Malware.Warn {
-		fmt.Printf(" \033[0;91m\u2022\033[0m %s\n", values[0])
-		fmt.Printf("%s", s.Justify(values[1]))
-	}
+		for _, values := range s.Report.Malware.Warn {
+			fmt.Printf(" \033[0;91m\u2022\033[0m %s\n", values[0])
+			fmt.Printf("%s", s.Justify(values[1]))
+		}
+	*/
 }
